@@ -1,0 +1,74 @@
+#include <Adafruit_Fingerprint.h>
+#include <SoftwareSerial.h>
+#include <Servo.h>
+
+SoftwareSerial fingerSerial(2, 3); // RX, TX
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&fingerSerial);
+
+Servo myServo;
+
+void setup()
+{
+  Serial.begin(9600);
+
+  finger.begin(57600);
+
+  myServo.attach(9);
+  myServo.write(0); // Locked Position
+
+  if (finger.verifyPassword())
+  {
+    Serial.println("Fingerprint Sensor Found!");
+  }
+  else
+  {
+    Serial.println("Fingerprint Sensor Not Found!");
+    while (1);
+  }
+
+  Serial.println("Place Finger...");
+}
+
+void loop()
+{
+  int id = getFingerprintID();
+
+  if (id > 0)
+  {
+    Serial.print("Authorized User ID: ");
+    Serial.println(id);
+
+    Serial.println("Access Granted");
+
+    myServo.write(90);  // Open Lock
+    delay(5000);
+
+    myServo.write(0);   // Close Lock
+    delay(1000);
+  }
+}
+
+int getFingerprintID()
+{
+  uint8_t p = finger.getImage();
+
+  if (p != FINGERPRINT_OK)
+    return -1;
+
+  p = finger.image2Tz();
+  if (p != FINGERPRINT_OK)
+    return -1;
+
+  p = finger.fingerFastSearch();
+
+  if (p == FINGERPRINT_OK)
+  {
+    return finger.fingerID;
+  }
+  else
+  {
+    Serial.println("Access Denied");
+    delay(1000);
+    return -1;
+  }
+}
